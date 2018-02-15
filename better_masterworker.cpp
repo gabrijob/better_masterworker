@@ -3,106 +3,11 @@
 /* This program is free software; you can redistribute it and/or modify it
  * under the terms of the license (GNU LGPL) which comes with this package. */
 
-#include "xbt/sysdep.h"
-#include <simgrid/s4u.hpp>
-#include <string>
-#include <queue>
+
+#include "common.hpp"
 
 XBT_LOG_NEW_DEFAULT_CATEGORY(better_masterworker, "Messages specific for this s4u example");
 
-//------------------------------------------EXTRA STUFF-----------------------------------
-typedef struct data_struct {
-  double comp_size;
-  long wid;
-}DATA;
-
-typedef struct worker_info_struct {
-  long wid;
-  aid_t pid;
-  int available;
-}W_INFO;
-
-typedef struct hb_data_struct {
-  W_INFO* p_worker_info;
-  std::string hb = "HEARTBEAT";
-}HEARTBEAT_DATA;
-
-//print the remaining percentage of a task execution every 0.5 seconds
-static void printRemainingPercentage(long worker_id, simgrid::s4u::ExecPtr execution/*, bool* is_executing*/){
-  while(1/**is_executing*/){
-    XBT_INFO("Remaining percentage: %.2f%% on worker-%ld", execution->getRemainingRatio()*100, worker_id);
-    simgrid::s4u::this_actor::sleep_for(0.5);
-  }
-  return;
-}
-
-class Task {
-  double comp_size;
-  long worker_id;
-  bool* is_executing;
-  simgrid::s4u::ExecPtr execution = nullptr;
-  simgrid::s4u::ActorPtr printer_percentage = nullptr;
-
-public:
-  explicit Task(DATA* task_data/*, bool* is_exec_ptr*/)  //any this_actor method called on the contructor considers the creating actor "this_actor" not the created
-  {
-    comp_size = task_data->comp_size;
-    worker_id = task_data->wid;
-    free(task_data);
-    //is_executing = is_exec_ptr;
-  }
-
-  void operator()()
-  {
-    execution = simgrid::s4u::this_actor::exec_init(comp_size);
-    execution->start(); 
-    //*is_executing = true; //so that the percentage printer can start printing  
-
-    //create a percentage printer as another actor to tell the remanining percentage of the execution while it's running
-    printer_percentage = simgrid::s4u::Actor::createActor("percentage printer", simgrid::s4u::Host::current(), printRemainingPercentage, worker_id, execution/*, is_executing*/);
-  
-    //start execution
-    XBT_INFO("Starting execution");
-    execution->wait();
-    XBT_INFO("Execution ended");
-    printer_percentage->kill();
-    //*is_executing = false;
-  }
-};
-
-static void heartbeat(long wid, aid_t pid, int* available_ptr){
-  W_INFO* w_info = (W_INFO*) malloc(sizeof(W_INFO));
-  w_info->wid = wid;
-  w_info->pid = pid;
-  HEARTBEAT_DATA* hb_data = (HEARTBEAT_DATA*) malloc(sizeof(HEARTBEAT_DATA));
-  hb_data->p_worker_info = w_info;
-
-  simgrid::s4u::MailboxPtr mailbox = simgrid::s4u::Mailbox::byName(std::string("MASTER_MAILBOX"));
-  while(*available_ptr > 0 ){
-    XBT_INFO("TUM TUM");
-    hb_data->p_worker_info->available = *available_ptr;
-    mailbox->put(hb_data, 0);
-    simgrid::s4u::this_actor::sleep_for(2); //criar define com intervalo de heartbeat
-  }
-}
-
-static void receive_task(long wid, int* available_task_slots){
-  simgrid::s4u::MailboxPtr mailbox = simgrid::s4u::Mailbox::byName(std::string("worker-") + std::to_string(wid));
-  while (1) { 
-      DATA* task_data = (DATA*) mailbox->get();
-      task_data->wid = wid;
-      xbt_assert(task_data != nullptr, "mailbox->get() failed");
-      if (task_data->comp_size < 0) { /* - Exit when -1.0 is received */
-        XBT_INFO("I'm done. See you!");
-        break;
-      }
-      if(*available_task_slots > 0){
-        *available_task_slots = *available_task_slots - 1;      
-        simgrid::s4u::ActorPtr task_exec = simgrid::s4u::Actor::createActor("task", simgrid::s4u::Host::current(), Task(task_data/*,is_executing*/));
-      }
-      simgrid::s4u::this_actor::yield();
-    }
-}
 //----------------------------------------------------------------------------------------------
 //------------------------------MASTER-&-WORKER-------------------------------------------------
 
