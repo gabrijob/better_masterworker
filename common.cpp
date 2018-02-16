@@ -3,7 +3,7 @@
 
 #include "common.hpp"
 
-XBT_LOG_NEW_DEFAULT_CATEGORY(common_better_masterworker, "Messages specific for this s4u example");
+XBT_LOG_EXTERNAL_DEFAULT_CATEGORY(better_masterworker);
 
 //print the remaining percentage of a task execution every 0.5 seconds
 static void printRemainingPercentage(long worker_id, simgrid::s4u::ExecPtr execution){
@@ -51,15 +51,14 @@ void heartbeat(long wid, aid_t pid, int* available_ptr){
   W_INFO* w_info = (W_INFO*) malloc(sizeof(W_INFO));
   w_info->wid = wid;
   w_info->pid = pid;
-  HEARTBEAT_DATA* hb_data = (HEARTBEAT_DATA*) malloc(sizeof(HEARTBEAT_DATA));
-  hb_data->p_worker_info = w_info;
+  w_info->msg = "HEARTBEAT";
 
   simgrid::s4u::MailboxPtr mailbox = simgrid::s4u::Mailbox::byName(std::string("MASTER_MAILBOX"));
   while(*available_ptr > 0 ){
     XBT_INFO("TUM TUM");
-    hb_data->p_worker_info->available = *available_ptr;
-    mailbox->put(hb_data, 0);
-    simgrid::s4u::this_actor::sleep_for(2); //criar define com intervalo de heartbeat
+    w_info->available = *available_ptr;
+    mailbox->put(w_info, 0);
+    simgrid::s4u::this_actor::sleep_for(HEARTBEAT_INTERVAL);
   }
 }
 

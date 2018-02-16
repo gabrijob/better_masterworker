@@ -35,8 +35,8 @@ public:
   void operator()()
   {
     DATA *data = nullptr;
-    HEARTBEAT_DATA* hb_data = nullptr;
-    
+    W_INFO* worker_info = nullptr;
+
     for (int i = 0; i < number_of_tasks; i++) { /* For each task to be executed: */
       if (number_of_tasks < 10000 || i % 10000 == 0)
         XBT_INFO("Sending \"%s\" (of %ld) to queue", (std::string("Task_") + std::to_string(i+1)).c_str(),
@@ -50,15 +50,17 @@ public:
     XBT_INFO("Waiting heartbeats");
     while(!task_data_list.empty()){
       mailbox = simgrid::s4u::Mailbox::byName(std::string("MASTER_MAILBOX"));
-      hb_data = (HEARTBEAT_DATA*) mailbox->get();
-      XBT_INFO("Receiveing heartbeat data");
-      xbt_assert(hb_data != nullptr, "mailbox->get() failed");
-      if(hb_data->p_worker_info->available > 0){
-        XBT_INFO("Sending task to worker-%ld", hb_data->p_worker_info->wid);
-        mailbox = simgrid::s4u::Mailbox::byName(std::string("worker-") + std::to_string(hb_data->p_worker_info->wid));
-        data = task_data_list.front();
-        task_data_list.pop();
-        mailbox->put(data, comm_size);
+      worker_info = (W_INFO*) mailbox->get();
+      if(worker_info->msg.compare("HEARTBEAT") == 0){
+        XBT_INFO("Receiveing heartbeat data");
+        xbt_assert(worker_info != nullptr, "mailbox->get() failed");
+        if(worker_info->available > 0){
+          XBT_INFO("Sending task to worker-%ld", worker_info->wid);
+          mailbox = simgrid::s4u::Mailbox::byName(std::string("worker-") + std::to_string(worker_info->wid));
+          data = task_data_list.front();
+          task_data_list.pop();
+          mailbox->put(data, comm_size);
+        }
       }
     }    
     
@@ -78,7 +80,6 @@ public:
 
 class Worker {
   long id = -1;
-  bool* is_executing;
   int* available_task_slots;
   simgrid::s4u::MailboxPtr mailbox = nullptr;
   simgrid::s4u::ActorPtr task_receiver = nullptr;
@@ -91,7 +92,7 @@ public:
     id      = std::stol(args[1]);
     mailbox = simgrid::s4u::Mailbox::byName(std::string("worker-") + std::to_string(id));
     available_task_slots = (int*) malloc(sizeof(int));
-    *available_task_slots = 2;
+    *available_task_slots = MAX_TASKS_PER_NODE;
   }
 
   void operator()()
