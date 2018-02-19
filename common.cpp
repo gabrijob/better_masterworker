@@ -54,12 +54,15 @@ void heartbeat(long wid, aid_t pid, int* available_ptr){
   w_info->msg = "HEARTBEAT";
 
   simgrid::s4u::MailboxPtr mailbox = simgrid::s4u::Mailbox::byName(std::string("MASTER_MAILBOX"));
-  while(*available_ptr > 0 ){
+  while(*available_ptr >= 0){
     XBT_INFO("TUM TUM");
     w_info->available = *available_ptr;
     mailbox->put(w_info, 0);
     simgrid::s4u::this_actor::sleep_for(HEARTBEAT_INTERVAL);
   }
+
+  w_info->msg = "TERMINATED";
+  mailbox->put(w_info, 0);  
 }
 
 void receive_task(long wid, int* available_task_slots){
@@ -69,12 +72,12 @@ void receive_task(long wid, int* available_task_slots){
       task_data->wid = wid;
       xbt_assert(task_data != nullptr, "mailbox->get() failed");
       if (task_data->comp_size < 0) { /* - Exit when -1.0 is received */
-        *available_task_slots = -1;
+        *available_task_slots = - MAX_TASKS_PER_NODE - 1; //to make sure it is a negative number even when all tasks end at the same time
         XBT_INFO("I'm done receiving tasks. See you!");
         break;
       }
       if(*available_task_slots > 0){
-        *available_task_slots = *available_task_slots - 1;      
+        *available_task_slots = *available_task_slots - 1;     
         simgrid::s4u::ActorPtr task_exec = simgrid::s4u::Actor::createActor("task", simgrid::s4u::Host::current(), Task(task_data, available_task_slots));
       }
       simgrid::s4u::this_actor::yield();

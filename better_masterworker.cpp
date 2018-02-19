@@ -6,6 +6,7 @@
 
 #include "common.hpp"
 
+
 XBT_LOG_NEW_DEFAULT_CATEGORY(better_masterworker, "Messages specific for this s4u example");
 
 //----------------------------------------------------------------------------------------------
@@ -37,6 +38,7 @@ public:
     DATA *data = nullptr;
     W_INFO* worker_info = nullptr;
 
+
     for (int i = 0; i < number_of_tasks; i++) { /* For each task to be executed: */
       if (number_of_tasks < 10000 || i % 10000 == 0)
         XBT_INFO("Sending \"%s\" (of %ld) to queue", (std::string("Task_") + std::to_string(i+1)).c_str(),
@@ -46,14 +48,15 @@ public:
       data->comp_size = comp_size;
       task_data_list.push(data);
     }
+    //simgrid::s4u::ActorPtr hb_receiver = simgrid::s4u::Actor::createActor("heartbeat_receiver", simgrid::s4u::Host::current(), receive_heartbeats,task_data_list,comm_size,workers_count);
 
-    XBT_INFO("Waiting heartbeats");
+    XBT_INFO("Awaiting heartbeats");
     while(!task_data_list.empty()){
       mailbox = simgrid::s4u::Mailbox::byName(std::string("MASTER_MAILBOX"));
       worker_info = (W_INFO*) mailbox->get();
+      XBT_INFO("Receiveing heartbeat data");
+      xbt_assert(worker_info != nullptr, "mailbox->get() failed");
       if(worker_info->msg.compare("HEARTBEAT") == 0){
-        XBT_INFO("Receiveing heartbeat data");
-        xbt_assert(worker_info != nullptr, "mailbox->get() failed");
         if(worker_info->available > 0){
           XBT_INFO("Sending task to worker-%ld", worker_info->wid);
           mailbox = simgrid::s4u::Mailbox::byName(std::string("worker-") + std::to_string(worker_info->wid));
@@ -61,9 +64,9 @@ public:
           task_data_list.pop();
           mailbox->put(data, comm_size);
         }
-      }
-    }    
-    
+      }     
+    } 
+
     XBT_INFO("All tasks have been dispatched. Let's tell everybody the computation is over.");
     for (int i = 0; i < workers_count; i++) {
       /* - Eventually tell all the workers to stop by sending a "finalize" task */
@@ -74,7 +77,18 @@ public:
       mailbox->put(data, 0);
     }
 
-    XBT_INFO("Master out");
+
+    long workers_processing = workers_count;
+    while(workers_processing){
+      mailbox = simgrid::s4u::Mailbox::byName(std::string("MASTER_MAILBOX"));
+      worker_info = (W_INFO*) mailbox->get();
+      xbt_assert(worker_info != nullptr, "mailbox->get() failed");
+      if(worker_info->msg.compare("TERMINATED") == 0){
+        workers_processing--;
+      }
+    }   
+
+    XBT_INFO("Master's work here is done");
   }
 };
 
@@ -103,7 +117,6 @@ public:
 
     heartbeat(id, simgrid::s4u::this_actor::getPid(), available_task_slots);
 
-    XBT_INFO("Worker-%ld out", id);
   }
 };
 //-------------------------------------------------------------------------------------------------

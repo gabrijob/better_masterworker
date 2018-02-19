@@ -7,7 +7,7 @@
 #include <queue>
 
 #define MAX_TASKS_PER_NODE 3
-#define HEARTBEAT_INTERVAL 1
+#define HEARTBEAT_INTERVAL 0.5
 
 typedef struct data_struct {
   double comp_size;
