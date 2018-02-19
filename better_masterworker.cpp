@@ -48,7 +48,7 @@ public:
       data->comp_size = comp_size;
       task_data_list.push(data);
     }
-    //simgrid::s4u::ActorPtr hb_receiver = simgrid::s4u::Actor::createActor("heartbeat_receiver", simgrid::s4u::Host::current(), receive_heartbeats,task_data_list,comm_size,workers_count);
+
 
     XBT_INFO("Awaiting heartbeats");
     while(!task_data_list.empty()){
@@ -64,6 +64,12 @@ public:
           task_data_list.pop();
           mailbox->put(data, comm_size);
         }
+      }
+      /*
+      mudar aqui depois VVVVVVVVVV
+      */
+      else if(worker_info->msg.compare("FAILING") == 0){ 
+          workers_count--;
       }     
     } 
 
@@ -94,6 +100,7 @@ public:
 
 class Worker {
   long id = -1;
+  bool will_fail;
   int* available_task_slots;
   simgrid::s4u::MailboxPtr mailbox = nullptr;
   simgrid::s4u::ActorPtr task_receiver = nullptr;
@@ -101,9 +108,10 @@ class Worker {
 public:
   explicit Worker(std::vector<std::string> args)
   {
-    xbt_assert(args.size() == 2, "The worker expects a single argument from the XML deployment file: "
-                                 "its worker ID (its numerical rank)");
+    xbt_assert(args.size() == 3, "The worker expects two arguments from the XML deployment file: "
+                                 "its worker ID (its numerical rank) and if it will fail or not (boolean)");
     id      = std::stol(args[1]);
+    will_fail = std::stol(args[2]);
     mailbox = simgrid::s4u::Mailbox::byName(std::string("worker-") + std::to_string(id));
     available_task_slots = (int*) malloc(sizeof(int));
     *available_task_slots = MAX_TASKS_PER_NODE;
@@ -115,7 +123,7 @@ public:
     
     task_receiver = simgrid::s4u::Actor::createActor("receiver", simgrid::s4u::Host::current(), receive_task,id,available_task_slots);
 
-    heartbeat(id, simgrid::s4u::this_actor::getPid(), available_task_slots);
+    heartbeat(id, simgrid::s4u::this_actor::getPid(), available_task_slots, will_fail);
 
   }
 };

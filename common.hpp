@@ -22,7 +22,7 @@ typedef struct worker_info_struct {
 }W_INFO;
 
 
-void heartbeat(long wid, aid_t pid, int* available_ptr);
+void heartbeat(long wid, aid_t pid, int* available_ptr, bool will_fail);
 void receive_task(long wid, int* available_task_slots);
 
 #endif

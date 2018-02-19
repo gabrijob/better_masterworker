@@ -9,19 +9,25 @@
     <argument value="5"/>         <!-- Number of workers -->
   </actor>
   <!-- The worker processes (with mailbox to listen on as argument) -->
+  <!-- The second argument answers if the worker will fail or not-->
   <actor host="Tremblay" function="worker" on_failure="RESTART">
+    <argument value="0"/> 
     <argument value="0"/> 
   </actor>
   <actor host="Jupiter" function="worker" on_failure="RESTART">
     <argument value="1"/> 
+    <argument value="0"/> 
   </actor>
   <actor host="Fafard" function="worker" on_failure="RESTART">
     <argument value="2"/> 
+    <argument value="0"/> 
   </actor>
   <actor host="Ginette" function="worker" on_failure="RESTART">
-    <argument value="3"/> 
+    <argument value="3"/>
+    <argument value="1"/>  
   </actor>
   <actor host="Bourassa" function="worker" on_failure="RESTART">
     <argument value="4"/> 
+    <argument value="1"/> 
   </actor>
 </platform>

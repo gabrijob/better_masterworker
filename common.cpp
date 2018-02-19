@@ -47,7 +47,7 @@ public:
   }
 };
 
-void heartbeat(long wid, aid_t pid, int* available_ptr){
+void heartbeat(long wid, aid_t pid, int* available_ptr, bool will_fail){
   W_INFO* w_info = (W_INFO*) malloc(sizeof(W_INFO));
   w_info->wid = wid;
   w_info->pid = pid;
@@ -59,6 +59,16 @@ void heartbeat(long wid, aid_t pid, int* available_ptr){
     w_info->available = *available_ptr;
     mailbox->put(w_info, 0);
     simgrid::s4u::this_actor::sleep_for(HEARTBEAT_INTERVAL);
+    /*
+    mudar aqui depois VVVVVVVVVV
+    */
+    if(will_fail){
+      w_info->msg = "FAILING";
+      mailbox->put(w_info, 0); 
+      XBT_INFO("Host failing");
+      simgrid::s4u::Host* my_host = simgrid::s4u::Host::current();
+      my_host->turnOff();
+    }
   }
 
   w_info->msg = "TERMINATED";
