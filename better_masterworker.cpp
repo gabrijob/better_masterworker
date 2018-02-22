@@ -38,6 +38,9 @@ public:
     DATA *data = nullptr;
     W_INFO* worker_info = nullptr;
 
+    Dfs my_dfs(workers_count);
+    my_dfs.allocate_chunks(number_of_tasks);
+    my_dfs.print_distribution();
 
     for (int i = 0; i < number_of_tasks; i++) { /* For each task to be executed: */
       if (number_of_tasks < 10000 || i % 10000 == 0)
@@ -56,6 +59,7 @@ public:
       worker_info = (W_INFO*) mailbox->get();
       XBT_INFO("Receiveing heartbeat data");
       xbt_assert(worker_info != nullptr, "mailbox->get() failed");
+      //regular heartbeat
       if(worker_info->msg.compare("HEARTBEAT") == 0){
         if(worker_info->available > 0){
           XBT_INFO("Sending task to worker-%ld", worker_info->wid);
@@ -65,9 +69,7 @@ public:
           mailbox->put(data, comm_size);
         }
       }
-      /*
-      mudar aqui depois VVVVVVVVVV
-      */
+      //failing heartbeat
       else if(worker_info->msg.compare("FAILING") == 0){ 
           workers_count--;
       }     
