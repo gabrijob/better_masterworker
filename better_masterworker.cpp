@@ -19,6 +19,7 @@ class Master {
   long workers_count               = 0; /* - Number of workers    */
   simgrid::s4u::MailboxPtr mailbox = nullptr;
   std::queue<DATA*> task_data_list;
+  
 
 public:
   explicit Master(std::vector<std::string> args)
@@ -49,6 +50,7 @@ public:
 
       data = (DATA *) malloc(sizeof(DATA));
       data->comp_size = comp_size;
+      data->chunk_id = i;
       task_data_list.push(data);
     }
 
@@ -65,6 +67,7 @@ public:
           XBT_INFO("Sending task to worker-%ld", worker_info->wid);
           mailbox = simgrid::s4u::Mailbox::byName(std::string("worker-") + std::to_string(worker_info->wid));
           data = task_data_list.front();
+          //task->chunk_id = get_chunk_from_worker
           task_data_list.pop();
           mailbox->put(data, comm_size);
         }
@@ -102,8 +105,7 @@ public:
 
 class Worker {
   long id = -1;
-  bool will_fail;
-  int* available_task_slots;
+  TASK_EXEC_INFO *exec_info;
   simgrid::s4u::MailboxPtr mailbox = nullptr;
   simgrid::s4u::ActorPtr task_receiver = nullptr;
 
@@ -113,19 +115,20 @@ public:
     xbt_assert(args.size() == 3, "The worker expects two arguments from the XML deployment file: "
                                  "its worker ID (its numerical rank) and if it will fail or not (boolean)");
     id      = std::stol(args[1]);
-    will_fail = std::stol(args[2]);
     mailbox = simgrid::s4u::Mailbox::byName(std::string("worker-") + std::to_string(id));
-    available_task_slots = (int*) malloc(sizeof(int));
-    *available_task_slots = MAX_TASKS_PER_NODE;
+
+    exec_info = (TASK_EXEC_INFO*) malloc(sizeof(TASK_EXEC_INFO));
+    exec_info->will_fail = std::stol(args[2]);
+    exec_info->available_task_slots = MAX_TASKS_PER_NODE;
   }
 
   void operator()()
   {
     XBT_INFO("Hello!");
     
-    task_receiver = simgrid::s4u::Actor::createActor("receiver", simgrid::s4u::Host::current(), receive_task,id,available_task_slots);
+    task_receiver = simgrid::s4u::Actor::createActor("receiver", simgrid::s4u::Host::current(), receive_task,id,exec_info);
 
-    heartbeat(id, simgrid::s4u::this_actor::getPid(), available_task_slots, will_fail);
+    heartbeat(id, simgrid::s4u::this_actor::getPid(), exec_info);
 
   }
 };

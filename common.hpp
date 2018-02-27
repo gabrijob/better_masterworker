@@ -16,9 +16,11 @@
 typedef std::list<long> chunk_list_type;
 typedef std::vector<chunk_list_type*> chunk_to_worker_vector_type;
 
+
 typedef struct data_struct {
   double comp_size;
   long wid;
+  long chunk_id;
 }DATA;
 
 typedef struct worker_info_struct {
@@ -26,11 +28,18 @@ typedef struct worker_info_struct {
   aid_t pid;
   int available;
   std::string msg;
+  std::vector<long> currently_executing[NUMBER_OF_COPIES];
 }W_INFO;
 
+typedef struct task_execution_info_struct {
+  bool will_fail;
+  int available_task_slots;
+  std::vector<long> currently_executing[NUMBER_OF_COPIES];
+}TASK_EXEC_INFO;
 
-void heartbeat(long wid, aid_t pid, int* available_ptr, bool will_fail);
-void receive_task(long wid, int* available_task_slots);
+
+void heartbeat(long wid, aid_t pid, TASK_EXEC_INFO *exec_info);
+void receive_task(long wid, TASK_EXEC_INFO *exec_info);
 
 class Dfs
 {
