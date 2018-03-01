@@ -8,6 +8,7 @@
 #include <string>
 #include <queue>
 #include <memory>
+#include "job_info.hpp"
 
 #define MAX_TASKS_PER_NODE 3
 #define NUMBER_OF_COPIES 2

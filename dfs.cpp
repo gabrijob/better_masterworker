@@ -5,6 +5,13 @@
 
 XBT_LOG_EXTERNAL_DEFAULT_CATEGORY(better_masterworker);//remover depois junto com os XBT_INFO
 
+
+long vector_size;
+  
+chunk_to_worker_vector_type chunk_worker_v;
+
+
+
 Dfs::Dfs(long number_of_workers)
 {
   vector_size = number_of_workers;

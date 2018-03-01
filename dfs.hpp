@@ -12,9 +12,6 @@ typedef std::vector<chunk_list_type*> chunk_to_worker_vector_type;
 class Dfs
 {
 
-  long vector_size;
-  
-  chunk_to_worker_vector_type chunk_worker_v;
 
   public:
 
