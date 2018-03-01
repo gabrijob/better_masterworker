@@ -36,6 +36,7 @@
         "utility": "cpp",
         "codecvt": "cpp",
         "string": "cpp",
-        "queue": "cpp"
+        "queue": "cpp",
+        "vector": "cpp"
     }
 }

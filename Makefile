@@ -5,9 +5,9 @@ INSTALL_PATH = $$HOME/simgrid
 INCLUDES = -I$(INSTALL_PATH)/include
 DEFS = -L$(INSTALL_PATH)/lib
 LDADD = -lsimgrid
-DEPS = common.hpp
+DEPS = common.hpp dfs.hpp master.hpp worker.hpp
 
-OBJ = better_masterworker.o common.o
+OBJ = better_masterworker.o dfs.o master.o worker.o
 
 all: better_masterworker
 

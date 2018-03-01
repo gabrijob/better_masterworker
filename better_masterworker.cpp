@@ -5,6 +5,9 @@
 
 
 #include "common.hpp"
+#include "dfs.hpp"
+#include "master.hpp"
+#include "worker.hpp"
 
 
 XBT_LOG_NEW_DEFAULT_CATEGORY(better_masterworker, "Messages specific for this s4u example");
@@ -18,8 +21,7 @@ class Master {
   double comm_size                 = 0; /* - Task communication size */
   long workers_count               = 0; /* - Number of workers    */
   simgrid::s4u::MailboxPtr mailbox = nullptr;
-  std::queue<DATA*> task_data_list;
-  
+  data_queue_ptr_type task_data_queue;
 
 public:
   explicit Master(std::vector<std::string> args)
@@ -31,8 +33,11 @@ public:
     comm_size       = std::stod(args[3]);
     workers_count   = std::stol(args[4]);
 
+    task_data_queue.reset(new std::queue<DATA*>);
+    
     XBT_INFO("Got %ld workers and %ld tasks to process", workers_count, number_of_tasks);
   }
+
 
   void operator()()
   {
@@ -43,61 +48,15 @@ public:
     my_dfs.allocate_chunks(number_of_tasks);
     my_dfs.print_distribution();
 
-    for (int i = 0; i < number_of_tasks; i++) { /* For each task to be executed: */
-      if (number_of_tasks < 10000 || i % 10000 == 0)
-        XBT_INFO("Sending \"%s\" (of %ld) to queue", (std::string("Task_") + std::to_string(i+1)).c_str(),
-                 number_of_tasks);
-
-      data = (DATA *) malloc(sizeof(DATA));
-      data->comp_size = comp_size;
-      data->chunk_id = i;
-      task_data_list.push(data);
-    }
-
+    fill_task_queue(task_data_queue, number_of_tasks, comp_size);
 
     XBT_INFO("Awaiting heartbeats");
-    while(!task_data_list.empty()){
-      mailbox = simgrid::s4u::Mailbox::byName(std::string("MASTER_MAILBOX"));
-      worker_info = (W_INFO*) mailbox->get();
-      XBT_INFO("Receiveing heartbeat data");
-      xbt_assert(worker_info != nullptr, "mailbox->get() failed");
-      //regular heartbeat
-      if(worker_info->msg.compare("HEARTBEAT") == 0){
-        if(worker_info->available > 0){
-          XBT_INFO("Sending task to worker-%ld", worker_info->wid);
-          mailbox = simgrid::s4u::Mailbox::byName(std::string("worker-") + std::to_string(worker_info->wid));
-          data = task_data_list.front();
-          //task->chunk_id = get_chunk_from_worker
-          task_data_list.pop();
-          mailbox->put(data, comm_size);
-        }
-      }
-      //failing heartbeat
-      else if(worker_info->msg.compare("FAILING") == 0){ 
-          workers_count--;
-      }     
-    } 
+    workers_count = listen_heartbeats(task_data_queue, comm_size, workers_count);
 
     XBT_INFO("All tasks have been dispatched. Let's tell everybody the computation is over.");
-    for (int i = 0; i < workers_count; i++) {
-      /* - Eventually tell all the workers to stop by sending a "finalize" task */
-      mailbox = simgrid::s4u::Mailbox::byName(std::string("worker-") + std::to_string(i % workers_count));
-      data = (DATA *) malloc(sizeof(DATA));
-      data->comp_size = -1.0;
-      data->wid = i % workers_count;
-      mailbox->put(data, 0);
-    }
+    send_finish_task_to_all_workers(workers_count);
 
-
-    long workers_processing = workers_count;
-    while(workers_processing){
-      mailbox = simgrid::s4u::Mailbox::byName(std::string("MASTER_MAILBOX"));
-      worker_info = (W_INFO*) mailbox->get();
-      xbt_assert(worker_info != nullptr, "mailbox->get() failed");
-      if(worker_info->msg.compare("TERMINATED") == 0){
-        workers_processing--;
-      }
-    }   
+    wait_finish_msg(workers_count);    
 
     XBT_INFO("Master's work here is done");
   }
@@ -117,7 +76,7 @@ public:
     id      = std::stol(args[1]);
     mailbox = simgrid::s4u::Mailbox::byName(std::string("worker-") + std::to_string(id));
 
-    exec_info = (TASK_EXEC_INFO*) malloc(sizeof(TASK_EXEC_INFO));
+    exec_info = new TASK_EXEC_INFO; //ici
     exec_info->will_fail = std::stol(args[2]);
     exec_info->available_task_slots = MAX_TASKS_PER_NODE;
   }
