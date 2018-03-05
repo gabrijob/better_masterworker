@@ -10,7 +10,13 @@
 #include "worker.hpp"
 
 
+
 XBT_LOG_NEW_DEFAULT_CATEGORY(better_masterworker, "Messages specific for this s4u example");
+
+using namespace dfs;
+using namespace job_info::available_task_slots;
+using namespace job_info::chunk_execution;
+using namespace job_info::processing;
 
 //----------------------------------------------------------------------------------------------
 //------------------------------MASTER-&-WORKER-------------------------------------------------
@@ -41,12 +47,14 @@ public:
 
   void operator()()
   {
-    DATA *data = nullptr;
-    W_INFO* worker_info = nullptr;
 
-    Dfs my_dfs(workers_count);
-    my_dfs.allocate_chunks(number_of_tasks);
-    my_dfs.print_distribution();
+    init_dfs(workers_count);
+    allocate_chunks(number_of_tasks);
+    print_distribution();
+
+    init_available_task_slots_at_vec(workers_count);
+    init_chunk_executing_at_vec(number_of_tasks);
+    init_chunk_processing_vec(number_of_tasks);
 
     fill_task_queue(task_data_queue, number_of_tasks, comp_size);
 
@@ -64,7 +72,7 @@ public:
 
 class Worker {
   long id = -1;
-  TASK_EXEC_INFO *exec_info;
+  exec_info_ptr_type e_info_ptr;
   simgrid::s4u::MailboxPtr mailbox = nullptr;
   simgrid::s4u::ActorPtr task_receiver = nullptr;
 
@@ -76,18 +84,17 @@ public:
     id      = std::stol(args[1]);
     mailbox = simgrid::s4u::Mailbox::byName(std::string("worker-") + std::to_string(id));
 
-    exec_info = new TASK_EXEC_INFO; //ici
-    exec_info->will_fail = std::stol(args[2]);
-    exec_info->available_task_slots = MAX_TASKS_PER_NODE;
+    e_info_ptr.reset(new EXEC_INFO);
+    e_info_ptr->will_fail = std::stol(args[2]);
   }
 
   void operator()()
   {
     XBT_INFO("Hello!");
     
-    task_receiver = simgrid::s4u::Actor::createActor("receiver", simgrid::s4u::Host::current(), receive_task,id,exec_info);
+    task_receiver = simgrid::s4u::Actor::createActor("receiver", simgrid::s4u::Host::current(), receive_task,id/*,exec_info*/);
 
-    heartbeat(id, simgrid::s4u::this_actor::getPid(), exec_info);
+    heartbeat(id, simgrid::s4u::this_actor::getPid(), e_info_ptr);
 
   }
 };

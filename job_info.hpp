@@ -32,10 +32,17 @@ namespace job_info
 
         long get_worker_executing_chunk(long chunk_id);
     }
+
+    namespace processing
+    {
+        void init_chunk_processing_vec(long number_of_chunks);
+
+        bool was_chunk_processed(long chunk_id);
+
+        long_vector_ptr get_chunks_executing_at_worker(long worker_id); 
+    }
+    
 }
-
-
-
 
 
 #endif

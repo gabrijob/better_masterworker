@@ -2,6 +2,8 @@
 #define MASTER_HEADER
 
 #include "common.hpp"
+#include "dfs.hpp"
+#include "job_info.hpp"
 
 
 typedef std::shared_ptr<std::queue<DATA*>> data_queue_ptr_type;
