@@ -18,6 +18,8 @@ namespace dfs
 
     void add_chunk_to_worker(long, long);
 
+    chunk_list_type* get_chunk_list_from_worker(long);
+
     long pop_chunk_from_worker(long);
 
     long_vector_ptr find_workers_with_chunk(long);

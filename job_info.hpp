@@ -1,6 +1,13 @@
 #ifndef JOBINFO_HEADER
 #define JOBINFO_HEADER
 
+
+#include "common.hpp"
+
+
+#define AVAILABLE -1
+#define FINISHED -2
+
 namespace job_info
 {
     namespace available_task_slots
@@ -36,6 +43,12 @@ namespace job_info
     namespace processing
     {
         void init_chunk_processing_vec(long number_of_chunks);
+
+        void mark_chunk_available(long chunk_id);
+
+        bool is_chunk_available(long chunk_id);
+
+        void mark_chunk_as_processed(long chunk_id);
 
         bool was_chunk_processed(long chunk_id);
 

@@ -1,7 +1,7 @@
 #ifndef JOBINFO_CODE
 #define JOBINFO_CODE
 
-#include "common.hpp"
+#include "job_info.hpp"
 
 
 XBT_LOG_EXTERNAL_DEFAULT_CATEGORY(better_masterworker);
@@ -58,7 +58,7 @@ namespace job_info
     {
         
         void init_chunk_executing_at_vec(long number_of_chunks) {
-            chunk_executing_at.assign(number_of_chunks, -1);
+            chunk_executing_at.assign(number_of_chunks, AVAILABLE);
         }
 
         void add_chunk_to_executing_at_vec() {
@@ -91,8 +91,24 @@ namespace job_info
             chunk_processing_vec.assign(number_of_chunks, false);
         }
 
-        bool was_chunk_processed(long chunk_id) {
-            return chunk_processing_vec[chunk_id];
+        void mark_chunk_available(long chunk_id) {
+            chunk_executing_at[chunk_id] = AVAILABLE;
+        }
+
+        bool is_chunk_available(long chunk_id) {
+            if(chunk_executing_at[chunk_id] == AVAILABLE)
+                return true;
+            
+            return false;
+        }
+
+        void mark_chunk_as_processed(long chunk_id) {
+            chunk_processing_vec[chunk_id] = true;
+            chunk_executing_at[chunk_id] = FINISHED;
+        }
+
+         bool was_chunk_processed(long chunk_id) {
+            return (chunk_processing_vec[chunk_id] && chunk_executing_at[chunk_id] == FINISHED);
         }
 
         long_vector_ptr get_chunks_executing_at_worker(long worker_id) {
@@ -106,10 +122,7 @@ namespace job_info
 
             return chunks;
         } 
-
-        
-    }
-    
+    }    
 }
 
 

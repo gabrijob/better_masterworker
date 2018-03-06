@@ -58,6 +58,12 @@ namespace dfs
     chunk_list->push_back(chunk_id);
   }
 
+  chunk_list_type* get_chunk_list_from_worker(long worker_id)
+  {
+    chunk_list_type* chunk_list;
+    chunk_list = chunk_worker_v[worker_id];
+    return chunk_list;
+  }
 
 
   long pop_chunk_from_worker(long worker_id)
@@ -89,6 +95,7 @@ namespace dfs
       }
     }
 
+    if(workers_id_v->empty()) XBT_INFO("NO WORKERS WITH CHUNK COPY");
     return workers_id_v; //must test if empty after
   }
 

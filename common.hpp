@@ -14,7 +14,7 @@
 #define NUMBER_OF_COPIES 2
 #define HEARTBEAT_INTERVAL 0.5
 
-enum{LOCAL, REMOTE, NO_TASK};
+enum{LOCAL, REMOTE, LOCAL_REC, NO_TASK};
 
 typedef struct data_struct {
   double comp_size;

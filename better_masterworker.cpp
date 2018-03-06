@@ -39,7 +39,7 @@ public:
     comm_size       = std::stod(args[3]);
     workers_count   = std::stol(args[4]);
 
-    task_data_queue.reset(new std::queue<DATA*>);
+    task_data_queue.reset(new std::list<DATA*>);
     
     XBT_INFO("Got %ld workers and %ld tasks to process", workers_count, number_of_tasks);
   }
@@ -59,7 +59,7 @@ public:
     fill_task_queue(task_data_queue, number_of_tasks, comp_size);
 
     XBT_INFO("Awaiting heartbeats");
-    workers_count = listen_heartbeats(task_data_queue, comm_size, workers_count);
+    workers_count = listen_heartbeats(task_data_queue, comm_size, comp_size, workers_count);
 
     XBT_INFO("All tasks have been dispatched. Let's tell everybody the computation is over.");
     send_finish_task_to_all_workers(workers_count);

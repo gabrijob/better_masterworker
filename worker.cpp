@@ -9,6 +9,7 @@ XBT_LOG_EXTERNAL_DEFAULT_CATEGORY(better_masterworker);
 
 using namespace job_info::available_task_slots;
 using namespace job_info::chunk_execution;
+using namespace job_info::processing;
 
 
 static void printRemainingPercentage(long worker_id, simgrid::s4u::ExecPtr execution);
@@ -39,11 +40,11 @@ public:
     printer_percentage = simgrid::s4u::Actor::createActor("percentage printer", simgrid::s4u::Host::current(), printRemainingPercentage, worker_id, execution);
   
     //start execution
-    XBT_INFO("Starting execution");
+    XBT_INFO("Starting execution of chunk %ld", chunk_id);
     set_worker_executing_chunk(chunk_id, worker_id);
     execution->wait();
     XBT_INFO("Execution ended");
-    //remove_chunk_from_executing_at_vec(chunk_id);
+    mark_chunk_as_processed(chunk_id);
     inc_task_slots_at_worker(worker_id);
     printer_percentage->kill();
   }
@@ -67,8 +68,10 @@ void heartbeat(long wid, aid_t pid, exec_info_ptr_type exec_info_ptr){
     //the worker will send a final heartbeat so that the master knows it is failing
       w_info->msg = "FAILING";
       mailbox->put(w_info, 0); 
-      XBT_INFO("Host failing");
+
       simgrid::s4u::Host* my_host = simgrid::s4u::Host::current();
+
+      XBT_INFO("Host failing: %s", my_host->getCname());
       my_host->turnOff();
     }
   }
@@ -90,10 +93,13 @@ void receive_task(long wid){
         XBT_INFO("I'm done receiving tasks. See you!");
         break;
       }
-      if(get_task_slots_at_worker(wid) > 0){        
-        dec_task_slots_at_worker(wid);
-        simgrid::s4u::ActorPtr task_exec = simgrid::s4u::Actor::createActor("task", simgrid::s4u::Host::current(), Task(task_data));
+      if(task_data->execution_type != NO_TASK){
+        if(get_task_slots_at_worker(wid) > 0){        
+          dec_task_slots_at_worker(wid);
+          simgrid::s4u::ActorPtr task_exec = simgrid::s4u::Actor::createActor("task", simgrid::s4u::Host::current(), Task(task_data));
+        }
       }
+      
       simgrid::s4u::this_actor::yield();
     }
 }
