@@ -9,7 +9,6 @@ XBT_LOG_EXTERNAL_DEFAULT_CATEGORY(better_masterworker);
 using namespace dfs;
 using namespace job_info::available_task_slots;
 using namespace job_info::chunk_execution;
-using namespace job_info::processing;
 
 
 
@@ -26,6 +25,7 @@ long get_available_chunk_to_worker(long worker_id) {
 }
 
 
+
 DATA* make_data(double comp_size, long worker_id, long chunk_id, int exec_type) {
     DATA* data = nullptr;
     data = (DATA*) malloc(sizeof(DATA));
@@ -36,7 +36,6 @@ DATA* make_data(double comp_size, long worker_id, long chunk_id, int exec_type) 
 
     return data;
 }
-
 
 
 
@@ -53,10 +52,10 @@ void fill_task_queue(data_queue_ptr_type task_data_queue, long number_of_tasks, 
 
       data = make_data(comp_size, -1, -1, LOCAL);
 
-      if(task_data_queue){ 
-        task_data_queue->push_back(data);
-      }
-      else task_data_queue.reset(new std::list<DATA*>);
+      if(!task_data_queue)
+        task_data_queue.reset(new std::list<DATA*>);
+      
+      task_data_queue->push_back(data);
     }
 }
 
@@ -73,7 +72,7 @@ long listen_heartbeats(data_queue_ptr_type task_data_queue, double comm_size, do
     while(!task_data_queue->empty()){
         mailbox = simgrid::s4u::Mailbox::byName(std::string("MASTER_MAILBOX"));
         worker_info = (W_INFO*) mailbox->get();
-        XBT_INFO("Receiveing heartbeat data");
+        if(DEBUG) XBT_INFO("Receiveing heartbeat data");
         xbt_assert(worker_info != nullptr, "mailbox->get() failed");
 
 
@@ -83,18 +82,21 @@ long listen_heartbeats(data_queue_ptr_type task_data_queue, double comm_size, do
 
             mailbox = simgrid::s4u::Mailbox::byName(std::string("worker-") + std::to_string(worker_info->wid));
             data = task_data_queue->front();
+            xbt_assert(data != nullptr, "task data queue corrupted");
 
             if(data->execution_type != REMOTE){
                 data->chunk_id = get_available_chunk_to_worker(worker_info->wid);
                 
-                if(data->chunk_id == -1) 
+                if(data->chunk_id == -1){ 
                     data->execution_type = NO_TASK;
-                else    
+                    XBT_INFO("Worker-%ld has no more chunks left to execute", worker_info->wid);
+                }
+                else{  
                     task_data_queue->pop_front();
-            }
-            
+                    XBT_INFO("Sending task to worker-%ld to execute chunk %ld", worker_info->wid, data->chunk_id);
+                }
+            }            
 
-            XBT_INFO("Sending task to worker-%ld to execute chunk %ld", worker_info->wid, data->chunk_id);
             mailbox->put(data, comm_size);
             }
         }
@@ -104,7 +106,10 @@ long listen_heartbeats(data_queue_ptr_type task_data_queue, double comm_size, do
 
             long_vector_ptr workers_with_chunk;
 
+            XBT_INFO("Worker-%ld lost, chunks to recover:", worker_info->wid);
             for(unsigned int i = 0; i < chunks_lost->size(); i++){
+                XBT_INFO("%ld", chunks_lost->at(i));
+                
                 workers_with_chunk = find_workers_with_chunk(chunks_lost->at(i));
 
                 if(!workers_with_chunk->empty()){                
@@ -126,6 +131,7 @@ long listen_heartbeats(data_queue_ptr_type task_data_queue, double comm_size, do
 }
 
 
+
 void send_finish_task_to_all_workers(long workers_count) {
 
     simgrid::s4u::MailboxPtr mailbox = nullptr;   
@@ -141,6 +147,7 @@ void send_finish_task_to_all_workers(long workers_count) {
 }
 
 
+
 void wait_finish_msg(long workers_count) {
 
     simgrid::s4u::MailboxPtr mailbox = nullptr;
@@ -150,13 +157,12 @@ void wait_finish_msg(long workers_count) {
       mailbox = simgrid::s4u::Mailbox::byName(std::string("MASTER_MAILBOX"));
       worker_info = (W_INFO*) mailbox->get();
       xbt_assert(worker_info != nullptr, "mailbox->get() failed");
+
       if(worker_info->msg.compare("TERMINATED") == 0){
         workers_count--;
       }
     }       
 }
-
-
 
 
 #endif

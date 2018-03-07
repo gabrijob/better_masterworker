@@ -11,9 +11,11 @@ namespace job_info
 {
     namespace
     {
+        /** Vector with the number of available task slot at iterator(worker). */
         std::vector<int> available_task_slots_at;
+
+        /** Vector with the location a chunk is executing, or if it was processed already or not. */
         std::vector<long> chunk_executing_at;
-        std::vector<bool> chunk_processing_vec;
     }
 
     namespace available_task_slots
@@ -54,6 +56,8 @@ namespace job_info
         }
     }
 
+
+
     namespace chunk_execution
     {
         
@@ -61,39 +65,38 @@ namespace job_info
             chunk_executing_at.assign(number_of_chunks, AVAILABLE);
         }
 
+
         void add_chunk_to_executing_at_vec() {
             chunk_executing_at.push_back(-1);
         }
+
 
         void remove_chunk_from_executing_at_vec(long chunk_id) {
             chunk_executing_at.erase( chunk_executing_at.begin() + chunk_id );
         }
 
+
         void set_worker_executing_chunk(long chunk_id, long worker_id) {
             chunk_executing_at[chunk_id] = worker_id;
         }
 
+
         long get_worker_executing_chunk(long chunk_id) {
             return chunk_executing_at[chunk_id];
         }
+
 
         void print_chunk_executing_at_vec() {
             for(unsigned int i = 0; i < chunk_executing_at.size(); i++){
                 XBT_INFO("worker %i has %ld slots available", i, chunk_executing_at[i]);
             }
         }
-    }
 
-    namespace processing
-    {
-
-        void init_chunk_processing_vec(long number_of_chunks) {
-            chunk_processing_vec.assign(number_of_chunks, false);
-        }
 
         void mark_chunk_available(long chunk_id) {
             chunk_executing_at[chunk_id] = AVAILABLE;
         }
+
 
         bool is_chunk_available(long chunk_id) {
             if(chunk_executing_at[chunk_id] == AVAILABLE)
@@ -102,14 +105,16 @@ namespace job_info
             return false;
         }
 
+
         void mark_chunk_as_processed(long chunk_id) {
-            chunk_processing_vec[chunk_id] = true;
             chunk_executing_at[chunk_id] = FINISHED;
         }
 
-         bool was_chunk_processed(long chunk_id) {
-            return (chunk_processing_vec[chunk_id] && chunk_executing_at[chunk_id] == FINISHED);
+
+        bool was_chunk_processed(long chunk_id) {
+            return chunk_executing_at[chunk_id] == FINISHED;
         }
+
 
         long_vector_ptr get_chunks_executing_at_worker(long worker_id) {
             long_vector_ptr chunks;
@@ -119,10 +124,9 @@ namespace job_info
                 if(chunk_executing_at[chunk] == worker_id)
                     chunks->push_back(chunk);
             }
-
             return chunks;
-        } 
-    }    
+        }
+    }
 }
 
 

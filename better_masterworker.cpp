@@ -13,10 +13,13 @@
 
 XBT_LOG_NEW_DEFAULT_CATEGORY(better_masterworker, "Messages specific for this s4u example");
 
+
 using namespace dfs;
 using namespace job_info::available_task_slots;
 using namespace job_info::chunk_execution;
-using namespace job_info::processing;
+
+
+
 
 //----------------------------------------------------------------------------------------------
 //------------------------------MASTER-&-WORKER-------------------------------------------------
@@ -47,14 +50,15 @@ public:
 
   void operator()()
   {
-
+    //initialize dfs structure
     init_dfs(workers_count);
     allocate_chunks(number_of_tasks);
     print_distribution();
 
+    //initialize general job informations structures
     init_available_task_slots_at_vec(workers_count);
     init_chunk_executing_at_vec(number_of_tasks);
-    init_chunk_processing_vec(number_of_tasks);
+
 
     fill_task_queue(task_data_queue, number_of_tasks, comp_size);
 
@@ -69,6 +73,8 @@ public:
     XBT_INFO("Master's work here is done");
   }
 };
+
+
 
 class Worker {
   long id = -1;

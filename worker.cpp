@@ -4,12 +4,12 @@
 #include "worker.hpp"
 
 
-
 XBT_LOG_EXTERNAL_DEFAULT_CATEGORY(better_masterworker);
+
 
 using namespace job_info::available_task_slots;
 using namespace job_info::chunk_execution;
-using namespace job_info::processing;
+
 
 
 static void printRemainingPercentage(long worker_id, simgrid::s4u::ExecPtr execution);
@@ -40,10 +40,12 @@ public:
     printer_percentage = simgrid::s4u::Actor::createActor("percentage printer", simgrid::s4u::Host::current(), printRemainingPercentage, worker_id, execution);
   
     //start execution
-    XBT_INFO("Starting execution of chunk %ld", chunk_id);
+    if(DEBUG) XBT_INFO("Starting execution of chunk %ld", chunk_id);
     set_worker_executing_chunk(chunk_id, worker_id);
+    
     execution->wait();
-    XBT_INFO("Execution ended");
+
+    if(DEBUG) XBT_INFO("Execution ended");
     mark_chunk_as_processed(chunk_id);
     inc_task_slots_at_worker(worker_id);
     printer_percentage->kill();
@@ -59,19 +61,22 @@ void heartbeat(long wid, aid_t pid, exec_info_ptr_type exec_info_ptr){
 
   simgrid::s4u::MailboxPtr mailbox = simgrid::s4u::Mailbox::byName(std::string("MASTER_MAILBOX"));
   while(get_task_slots_at_worker(wid) >= 0){
-    XBT_INFO("TUM TUM");
+    if(DEBUG) XBT_INFO("TUM TUM");
+    
     w_info->msg = "HEARTBEAT";
     mailbox->put(w_info, 0);
+
     simgrid::s4u::this_actor::sleep_for(HEARTBEAT_INTERVAL);
 
     if(exec_info_ptr->will_fail){
-    //the worker will send a final heartbeat so that the master knows it is failing
+  
+      simgrid::s4u::Host* my_host = simgrid::s4u::Host::current();
+      XBT_INFO("Host failing: %s", my_host->getCname());
+
+      //the worker will send a final heartbeat so that the master knows it is failing
       w_info->msg = "FAILING";
       mailbox->put(w_info, 0); 
 
-      simgrid::s4u::Host* my_host = simgrid::s4u::Host::current();
-
-      XBT_INFO("Host failing: %s", my_host->getCname());
       my_host->turnOff();
     }
   }
@@ -84,15 +89,18 @@ void heartbeat(long wid, aid_t pid, exec_info_ptr_type exec_info_ptr){
 
 void receive_task(long wid){
   simgrid::s4u::MailboxPtr mailbox = simgrid::s4u::Mailbox::byName(std::string("worker-") + std::to_string(wid));
+  
   while (1) { 
       DATA* task_data = (DATA*) mailbox->get();
       xbt_assert(task_data != nullptr, "mailbox->get() failed");
       task_data->wid = wid;
+
       if (task_data->comp_size < 0) { /* - Exit when -1.0 is received */        
-        set_task_slots_at_worker(wid, - MAX_TASKS_PER_NODE - 1); //to make sure it is a negative number even when all tasks end at the same time
+        set_task_slots_at_worker(wid, - MAX_TASKS_PER_NODE - 1); //to make sure it is a negative number even after all tasks end at the same time
         XBT_INFO("I'm done receiving tasks. See you!");
         break;
       }
+      
       if(task_data->execution_type != NO_TASK){
         if(get_task_slots_at_worker(wid) > 0){        
           dec_task_slots_at_worker(wid);
@@ -106,11 +114,11 @@ void receive_task(long wid){
 
 
 
-//print the remaining percentage of a task execution every 0.5 seconds
+//print the remaining percentage of a task execution every REMAINING_PERC_INTERVAL seconds
 static void printRemainingPercentage(long worker_id, simgrid::s4u::ExecPtr execution){
   while(1){
     XBT_INFO("Remaining percentage: %.2f%% on worker-%ld", execution->getRemainingRatio()*100, worker_id);
-    simgrid::s4u::this_actor::sleep_for(0.5);
+    simgrid::s4u::this_actor::sleep_for(REMAINING_PERC_INTERVAL);
   }
   return;
 }
